@@ -1,0 +1,66 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.pyc
+*.python-version
+env/
+rag_env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# pip cache
+pip-wheel-metadata/
+*.egg-info/
+dist/
+build/
+
+# IDEs
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# Env
+.env
+.env.*
+
+# Docker
+docker-compose.override.yml
+**/Dockerfile.*.swp
+docker-compose.override.yml.swp
+
+# PostgreSQL data volume
+postgres_data/
+
+# Migrations
+alembic/versions/__pycache__/
+alembic/versions/*.pyc
+
+# Pytest cache
+.pytest_cache/
+htmlcov/
+
+# Logs
+*.log
+
+# Mac OS
+.DS_Store
+
+# MyPy
+.mypy_cache/
+
+# Pyre type checker
+.pyre/
+
+# Coverage reports
+.coverage
+coverage.xml
+*.cover
+*.py,cover
+
+# Local env files
+.local/

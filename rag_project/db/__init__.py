@@ -1,0 +1,1 @@
+# Modèles SQLAlchemy, organisés par domaine ou global
