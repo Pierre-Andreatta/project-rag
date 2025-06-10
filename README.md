@@ -32,16 +32,30 @@ POSTGRES_USER=user...
 POSTGRES_PASSWORD=secret...
 ```
 
+---
+
 ## ▶️ Running the Project
 
 ```
 docker-compose up -d --build
 ```
 
+---
+
 ## 🌐 API Endpoints
 Interactive documentation available at:
 - Swagger UI: http://localhost:8000/docs
 - ReDoc: http://localhost:8000/redoc
+
+Endpoints:
+- ```/ingest-url``` : used to fetch the content of a web page by providing its URL.  
+The content is split into chunks, which are then stored in the database with embeddings for semantic search.
+
+
+- ```/ask```: used to query the application. It retrieves the top-N chunks with the closest embeddings.
+These retrieved chunks are then sent to an OpenAI API, which uses only them to generate a summarized answer.
+
+---
 
 ## 📂 Database Migrations
 Create a new migration manually:
@@ -60,9 +74,12 @@ alembic upgrade head
 ```
 So no manual migration step is needed when using docker-compose up.
 
+---
+
 ## ✉️ Logging
 A logger is configured in rag_project/logger.py
 
+---
 
 ## 🖥️ Tech Stack
 - `FastAPI`
@@ -73,20 +90,24 @@ A logger is configured in rag_project/logger.py
 - `postgres`
 - `Docker`
 
+---
+
 ## 🎯️ TODO
 
 - [ ] **Summarizing texts:**  
-Consider the value of summarizing texts before embedding and storing them in the database.
-This would allow for more concise chunks.
+Consider the value of summarizing texts before embedding and storing them in the database.  
+This would allow for more concise chunks.  
 The loss of information would be offset by the ability to include more in the prompt.
-  
+
 
 - [ ] **Clean text before embedding:**
 ```python
 unicodedata.normalize(...)
 re.sub(...)
 ```
+
 - [ ] **Manage duplicated or similar content:**
+
   - [ ] Detect similar contents in app or db with embedding
 ```python
 from scipy.spatial.distance import cosine
@@ -103,7 +124,10 @@ select *
 from table
 WHERE embedding <-> :emb < 0.05
 ```
- - [ ] **Prefilter duplicated content with text** ***(only if duplicated from different sources.*** **To monitor)**
+
+
+ - [ ] **Prefilter duplicated content with text** ***(only if duplicated from different sources.*** **To monitor)**  
+
 Create hash column
 ```sql
 class ContentORM(Base):
@@ -172,8 +196,11 @@ class SourceContentORM(Base):
     source = relationship("SourceORM", backref="source_contents")
     content = relationship("ContentORM", backref="source_links")
 ```
+
 - [ ] **DB optimizations:**
+
   - [ ] Vectorial index on embedding (e.g. with ivfflat, hnsw)
+
 ```sql
 CREATE INDEX ON contents USING ivfflat (embedding vector_cosine_ops) WITH (lists = 100);
 ```
@@ -184,9 +211,21 @@ CREATE INDEX ON contents USING ivfflat (embedding vector_cosine_ops) WITH (lists
   - [ ] Youtube (e.g. with yt_dlp + Whisper, yt-dlp + youtube_transcript_api)
   - [ ] TXT (e.g. with chardet)
   - [ ] ...
+
+
 - [ ] **Implement async and multiprocessing**
+
+
 - [ ] **Create test suite with pytest**
+
+
 - [ ] **Add a whitelist/registry of already processed URLs to avoid re-processing the same content.**
+
+
 - [ ] **Add CI/CD with GitHub Actions**
+
+
 - [ ] **Optimize with NumPy (vectors, np.dot, np.linalg.norm, np.array)**
+
+
 - [ ] **Implement frontend interface**
