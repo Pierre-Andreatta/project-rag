@@ -1,9 +1,16 @@
 import requests
 from bs4 import BeautifulSoup
+from urllib.parse import urlparse
+
+from rag_project.exceptions import ScraperError
 
 
-def scrape_page(url: str) -> str:
-    response = requests.get(url)
+def default_scraper(url: str, timeout: int = 10) -> str:
+
+    if not urlparse(url).scheme in ('http', 'https'):
+        raise ScraperError("Invalid URL scheme")
+
+    response = requests.get(url, timeout=timeout)
     soup = BeautifulSoup(response.content, "html5lib")
 
     # Tags to remove
@@ -12,7 +19,7 @@ def scrape_page(url: str) -> str:
 
     raw_texts = list(soup.stripped_strings)
 
-    cleaned_texts = []
+    texts = []
     seen = set()
     for text in raw_texts:
         text = " ".join(text.split())  # Normalize whitespace
@@ -21,6 +28,6 @@ def scrape_page(url: str) -> str:
         if text.lower() in seen:  # Avoid exact duplicates (case-insensitive)
             continue
         seen.add(text.lower())
-        cleaned_texts.append(text)
+        texts.append(text)
 
-    return "\n\n".join(cleaned_texts)
+    return "\n\n".join(texts)

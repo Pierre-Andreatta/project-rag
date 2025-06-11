@@ -1,7 +1,7 @@
 from openai import OpenAI
 import os
 
-from rag_project.db.crud.document import get_similar_documents
+from rag_project.db.crud.operations.similarity import find_similar_contents
 from rag_project.domain.models import DocumentDomain
 from rag_project.logger import get_logger
 
@@ -9,6 +9,7 @@ logger = get_logger(__name__)
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 
+# TODO: set prompt in other file to choice injected prompt
 def build_prompt(question: str, docs: list[DocumentDomain]) -> str:
     try:
         context = "\n\n".join([doc.content for doc in docs])
@@ -29,7 +30,6 @@ def query_llm(prompt: str) -> str:
 
 
 def search_similar_documents(query_vector, top_k=2):
-    documents_data = get_similar_documents(query_vector, top_k)
-    # TODO: only .content from get_similar_documents
+    documents_data = find_similar_contents(query_vector, top_k)
+    # TODO: rework find_similar_contents to handle session
     return [DocumentDomain(**doc_data) for doc_data in documents_data]
-
