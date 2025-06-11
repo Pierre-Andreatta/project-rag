@@ -16,7 +16,8 @@ database_url = f"postgresql+psycopg://{user}:{password}@{host}:5432/{db_name}"
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from rag_project.db.base import Base
-from rag_project.db.models.document_models import Vector, DocumentORM
+from rag_project.db.models.content import Vector, ContentORM
+from rag_project.db.models.source import RejectReasonORM, CategoryORM, SourceORM, SourceCategoryORM
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
