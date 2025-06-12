@@ -2,9 +2,14 @@ from sentence_transformers import SentenceTransformer
 
 from rag_project.db.crud.content import ContentCRUD
 from rag_project.db.session import SessionLocal
+from rag_project.domain.models import SourceTypeEnum
 from rag_project.exceptions import IngestionError
+from rag_project.logger import get_logger
 from rag_project.services.scraping_service import default_scraper
 from rag_project.utils.text_processing import default_chunker
+
+
+logger = get_logger(__name__)
 
 
 class IngestionService:
@@ -49,41 +54,56 @@ class IngestionService:
             raise IngestionError(f"No chunks to embed")
         self.embeddings = model.encode(self.chunks, normalize_embeddings=True).tolist()
 
-    def ingest_chunks(self, category_id: int = 1):
-        with self.session_factory() as session:
-            try:
-                if len(self.chunks) != len(self.embeddings):
-                    raise ValueError("nb chunks <> nb embeddings")
+    def ingest_chunks(self, session: SessionLocal, source_type: SourceTypeEnum) -> int:
+        try:
+            if len(self.chunks) != len(self.embeddings):
+                raise ValueError("nb chunks <> nb embeddings")
 
-                crud = ContentCRUD(session)
-                count = crud.store_chunks(self.chunks, self.embeddings, self.source_url, category_id)
+            content_crud = ContentCRUD(session)
+            count = content_crud.store_chunks(self.chunks, self.embeddings, self.source_url, source_type)
 
-                if count != len(self.chunks):
-                    raise ValueError("Unexpected chunks count")
+            if count != len(self.chunks):
+                raise ValueError("Unexpected chunks count")
 
-                return count
-            except Exception as e:
-                session.rollback()
-                self.reset_state()
-                raise IngestionError(f"ingest_chunks : {str(e)}") from e
+            return count
+
+        except Exception as e:
+            self.reset_state()
+            message = f"ingest_chunks : {str(e)}"
+            logger.error(message)
+            raise IngestionError(message) from e
 
     def ingest_content(self,
-                       model: SentenceTransformer, category_id: int = None,
-                       url: str = None, youtube_url: str = None, path: str = None):
+                       model: SentenceTransformer, source_type: SourceTypeEnum,
+                       url: str = None, youtube_url: str = None, path: str = None) -> int:
 
-        self.reset_state()
+        session = self.session_factory()
+        try:
+            self.reset_state()
 
-        # Source handling
-        if sum(x is not None for x in [url, youtube_url, path]) != 1:
-            raise IngestionError("Exactly one source must be provided")
+            # Source handling
+            if sum(x is not None for x in [url, youtube_url, path]) != 1:
+                raise IngestionError("Exactly one source must be provided")
 
-        if url:
-            self.content_from_url(url)
-        elif youtube_url:
-            self.content_from_youtube(youtube_url)
-        elif path:
-            self.content_from_local(path)
+            if url:
+                self.content_from_url(url)
+            elif youtube_url:
+                self.content_from_youtube(youtube_url)
+            elif path:
+                self.content_from_local(path)
 
-        self.chunk_text(max_tokens=300)
-        self.embed_chunks(model)
-        return self.ingest_chunks(category_id)
+            self.chunk_text(max_tokens=300)
+            self.embed_chunks(model)
+            chunks_count = self.ingest_chunks(session, source_type)
+
+            session.commit()
+            return chunks_count
+
+        except Exception as e:
+            session.rollback()
+            message = f"ingest_content : {str(e)}"
+            logger.error(message)
+            raise IngestionError(message) from e
+        finally:
+            session.close()
+            self.reset_state()

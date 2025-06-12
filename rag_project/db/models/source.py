@@ -12,7 +12,7 @@ class RejectReasonORM(Base):
     severity = Column(Integer, default=3, nullable=False)
 
     # Relation
-    rejected_sources = relationship("SourceORM", back_populates="rejection_reason")
+    rejected_sources = relationship("SourceORM", back_populates="rejection_reason_obj")
 
 
 class CategoryORM(Base):
@@ -44,6 +44,7 @@ class SourceORM(Base):
     # Relations
     rejection_reason_obj = relationship(
         "RejectReasonORM",
+        foreign_keys=[rejection_reason],
         back_populates="rejected_sources"
     )
 

@@ -12,7 +12,7 @@ class Vector(UserDefinedType):
     def __init__(self, dim=384):
         self.dim = dim
 
-    def get_col_spec(self):
+    def get_col_spec(self) -> str:
         return f"VECTOR({self.dim})"
 
     def bind_processor(self, dialect):
@@ -39,7 +39,7 @@ class ContentORM(Base):
     created_at = Column(DateTime, server_default=func.now())
     last_accessed = Column(DateTime)
 
-    source = relationship("Source", backref="contents")
+    # source = relationship("Source", backref="contents")
 
     __table_args__ = (
         Index('ix_embedding_cosine', embedding,
