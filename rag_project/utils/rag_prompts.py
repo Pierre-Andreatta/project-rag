@@ -1,0 +1,2 @@
+rag_prompt_fr = "Voici des documents :\n{context}\n\nQuestion : {question}\nRéponds de manière précise en t'appuyant uniquement sur ces documents."
+rag_prompt_en = "Here are some documents:\n{context}\n\nQuestion: {question}\nAnswer precisely, relying solely on these documents."

@@ -1,7 +1,7 @@
 from sqlalchemy.exc import SQLAlchemyError
 from requests.exceptions import Timeout
 
-from rag_project.exceptions import DataBaseError, IngestionError, TimeOutError, UnexpectedError
+from rag_project.exceptions import DataBaseError, IngestionError, TimeOutError, UnexpectedError, RagError
 from rag_project.logger import get_logger
 
 logger = get_logger(__name__)
@@ -27,6 +27,11 @@ def db_session_manager(fn):
             exc_info = e.exc_info
             raise IngestionError(message=error_log, code=500) from e
 
+        except RagError as e:
+            error_log = f"Rag Error during transaction: {str(e)}"
+            exc_info = e.exc_info
+            raise IngestionError(message=error_log, code=500) from e
+
         except Timeout as e:
             error_log = f"TimeOut Error during transaction: {str(e)}"
             raise TimeOutError(message=error_log, code=500) from e
@@ -44,7 +49,8 @@ def db_session_manager(fn):
                 logger.info("session rollback")
                 session.rollback()
                 logger.error(error_log, exc_info=exc_info)
-                self.reset_state()
+
+            self.reset_state()
 
             logger.info("session closed")
             session.close()

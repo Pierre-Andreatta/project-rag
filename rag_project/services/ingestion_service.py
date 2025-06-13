@@ -80,7 +80,7 @@ class IngestionService:
 
     @db_session_manager
     def ingest_content(self,
-                       session, model: SentenceTransformer, source_type: SourceTypeEnum,
+                       session: SessionLocal, model: SentenceTransformer, source_type: SourceTypeEnum,
                        url: str = None, youtube_url: str = None, path: str = None) -> int:
 
         try:
