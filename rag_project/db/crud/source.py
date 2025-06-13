@@ -4,7 +4,6 @@ from sqlalchemy import select
 from rag_project.db.models.source import SourceORM, RejectReasonORM
 from rag_project.db.crud.base_crud import BaseCRUD
 from rag_project.domain.models import SourceTypeEnum
-from rag_project.exceptions import DataBaseError
 from rag_project.logger import get_logger
 
 
@@ -14,39 +13,25 @@ logger = get_logger(__name__)
 class SourceCRUD(BaseCRUD):
 
     def create_source(self, path_to_content: str, source_type: SourceTypeEnum = SourceTypeEnum.DEFAULT) -> SourceORM:
-        try:
-            source = SourceORM(path_to_content=path_to_content, source_type=source_type)
-            self.session.add(source)
-            return source
-        except Exception as e:
-            self.session.close()
-            raise DataBaseError(f"create_source : {str(e)}") from e
+        source = SourceORM(path_to_content=path_to_content, source_type=source_type)
+        self.session.add(source)
+        return source
 
     def get_or_create_source(self, path_to_content: str, source_type: SourceTypeEnum = SourceTypeEnum.DEFAULT) -> SourceORM:
-        try:
-            source = self.get_source_by_path_to_content(path=path_to_content)
+        source = self.get_source_by_path_to_content(path=path_to_content)
 
-            if not source:
-                source = self.create_source(
-                    path_to_content=path_to_content,
-                    source_type=source_type
-                )
-
+        if not source:
+            source = self.create_source(
+                path_to_content=path_to_content,
+                source_type=source_type
+            )
             self.session.flush()
 
-            return source
-
-        except Exception as e:
-            self.session.close()
-            raise DataBaseError(f"get_or_create_source : {str(e)}") from e
+        return source
 
     def get_source_by_path_to_content(self, path: str) -> Optional[SourceORM]:
-        try:
-            stmt = select(SourceORM).where(path == SourceORM.path_to_content)
-            return self.session.execute(stmt).scalar_one_or_none()
-        except Exception as e:
-            self.session.close()
-            raise DataBaseError(f"get_source_by_path_to_content : {str(e)}") from e
+        stmt = select(SourceORM).where(path == SourceORM.path_to_content)
+        return self.session.execute(stmt).scalar_one_or_none()
 
     def get_source_by_id(self, source_id: int) -> Optional[SourceORM]:
         return self.session.get(SourceORM, source_id)
@@ -61,7 +46,6 @@ class SourceCRUD(BaseCRUD):
         )
 
     def reject_source(self, source_id: int, reason: int):
-
         stmt = select(RejectReasonORM).where(RejectReasonORM.reason == reason)
         reason_obj = self.session.execute(stmt).scalar_one_or_none()
 

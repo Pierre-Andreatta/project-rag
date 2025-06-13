@@ -1,7 +1,10 @@
+from typing import List
+
 from openai import OpenAI
 import os
 
-from rag_project.db.crud.operations.similarity import find_similar_contents
+from rag_project.db.crud.content import ContentCRUD
+from rag_project.db.session import get_session, SessionLocal
 from rag_project.domain.models import DocumentDomain
 from rag_project.logger import get_logger
 
@@ -29,7 +32,9 @@ def query_llm(prompt: str) -> str:
         logger.error(f"query_llm : {e}")
 
 
-def search_similar_documents(query_vector, top_k=2):
-    documents_data = find_similar_contents(query_vector, top_k)
-    # TODO: rework find_similar_contents to handle session
+def search_similar_documents(query_vector, top_k=2) -> List[DocumentDomain]:
+    session = SessionLocal()
+    content_crud = ContentCRUD(session)
+    documents_data = content_crud.find_similar_contents(query_vector, top_k)
+    session.close()
     return [DocumentDomain(**doc_data) for doc_data in documents_data]

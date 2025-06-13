@@ -1,6 +1,6 @@
 from typing import List, Dict
 from sqlalchemy import cast, literal, func
-
+from sqlalchemy.exc import SQLAlchemyError
 
 from rag_project.db.models.content import ContentORM, Vector
 from rag_project.db.crud.base_crud import BaseCRUD
@@ -26,23 +26,19 @@ class ContentCRUD(BaseCRUD):
             source_type: SourceTypeEnum = SourceTypeEnum.DEFAULT
     ) -> int:
 
-        try:
-            source = self.source_crud.get_or_create_source(source_url, source_type)
+        source = self.source_crud.get_or_create_source(source_url, source_type)
 
-            contents = [
-                ContentORM(
-                    content=text,
-                    embedding=emb,
-                    source_id=source.id
-                )
-                for text, emb in zip(chunks, embeddings)
-            ]
+        contents = [
+            ContentORM(
+                content=text,
+                embedding=emb,
+                source_id=source.id
+            )
+            for text, emb in zip(chunks, embeddings)
+        ]
 
-            self.session.bulk_save_objects(contents)  # FIXME: check if need bulk_save_objects
-            return len(contents)
-
-        except Exception as e:
-            raise DataBaseError(f"store_chunks : {str(e)}") from e
+        self.session.bulk_save_objects(contents)  # FIXME: check if need bulk_save_objects
+        return len(contents)
 
     def find_similar_contents(
             self,
@@ -50,6 +46,7 @@ class ContentCRUD(BaseCRUD):
             top_k: int = 5,
             min_similarity: float = 0.7
     ) -> List[dict]:
+        # FIXME: HINT: No function matches the given name and argument types. You might need to add explicit type casts.
         # embedding_cast = cast(literal(query_vector), Vector(384))
         # distance_op = ContentORM.embedding.cosine_distance(embedding_cast)
         distance_op = func.cosine_distance(ContentORM.embedding, query_vector)

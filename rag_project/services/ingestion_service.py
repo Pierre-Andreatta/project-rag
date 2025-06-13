@@ -2,6 +2,7 @@ from sentence_transformers import SentenceTransformer
 
 from rag_project.db.crud.content import ContentCRUD
 from rag_project.db.session import SessionLocal
+from rag_project.db.session_manager import db_session_manager
 from rag_project.domain.models import SourceTypeEnum
 from rag_project.exceptions import IngestionError
 from rag_project.logger import get_logger
@@ -35,8 +36,12 @@ class IngestionService:
         self.source_url = ''
 
     def content_from_url(self, url: str):
-        self.source_url = url
-        self.texts = self.scraper(url)
+        try:
+            self.source_url = url
+            self.texts = self.scraper(url)
+
+        except Exception:
+            raise
 
     def content_from_youtube(self, youtube_url: str):
         raise NotImplementedError("YouTube ingestion not implemented yet")
@@ -71,19 +76,22 @@ class IngestionService:
             self.reset_state()
             message = f"ingest_chunks : {str(e)}"
             logger.error(message)
-            raise IngestionError(message) from e
+            raise
 
+    @db_session_manager
     def ingest_content(self,
-                       model: SentenceTransformer, source_type: SourceTypeEnum,
+                       session, model: SentenceTransformer, source_type: SourceTypeEnum,
                        url: str = None, youtube_url: str = None, path: str = None) -> int:
 
-        session = self.session_factory()
         try:
             self.reset_state()
 
             # Source handling
+            if source_type is None:
+                raise IngestionError("Source type must be provided", exc_info=False)
+
             if sum(x is not None for x in [url, youtube_url, path]) != 1:
-                raise IngestionError("Exactly one source must be provided")
+                raise IngestionError("Exactly one source must be provided", exc_info=False)
 
             if url:
                 self.content_from_url(url)
@@ -96,14 +104,9 @@ class IngestionService:
             self.embed_chunks(model)
             chunks_count = self.ingest_chunks(session, source_type)
 
-            session.commit()
             return chunks_count
 
         except Exception as e:
-            session.rollback()
             message = f"ingest_content : {str(e)}"
             logger.error(message)
-            raise IngestionError(message) from e
-        finally:
-            session.close()
-            self.reset_state()
+            raise

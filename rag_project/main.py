@@ -4,7 +4,7 @@ from contextlib import asynccontextmanager
 
 from rag_project.api.dependencies import get_embedding_model, get_ingestion_service
 from rag_project.domain.models import SourceTypeEnum
-from rag_project.exceptions import IngestionError
+from rag_project.exceptions import IngestionError, DataBaseError, TimeOutError
 from rag_project.services.ingestion_service import IngestionService
 from rag_project.services.rag import build_prompt, query_llm, search_similar_documents
 
@@ -36,10 +36,15 @@ async def ingest_url(
             source_type=SourceTypeEnum.WEB
         )
         return {"status": "success", "ingested": count}
+
     except IngestionError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    finally:
-        service.reset_state()
+        raise HTTPException(status_code=500, detail=str(e))
+
+    except DataBaseError as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+    except TimeOutError as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.post("/ask")
