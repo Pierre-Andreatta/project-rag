@@ -1,11 +1,12 @@
-from fastapi import FastAPI, Query, Request
+from fastapi import FastAPI, Query, Depends, HTTPException
 from sentence_transformers import SentenceTransformer
 from contextlib import asynccontextmanager
 
-from rag_project.db.crud.document import store_chunks
-from rag_project.services.chunk import chunk_text, embed_chunks
-from rag_project.services.scraping import scrape_page
-from rag_project.services.rag import build_prompt, query_llm, search_similar_documents
+from rag_project.api.dependencies import get_embedding_model, get_ingestion_service, get_rag_service
+from rag_project.domain.models import SourceTypeEnum
+from rag_project.exceptions import IngestionError, DataBaseError, TimeOutError, RagError
+from rag_project.services.ingestion_service import IngestionService
+from rag_project.services.rag_service import RagService
 
 
 @asynccontextmanager
@@ -23,20 +24,53 @@ app = FastAPI(
 
 
 @app.post("/ingest-url")
-def ingest_url(request: Request, url: str = Query(...)):
-    model = request.app.state.model
-    text = scrape_page(url)
-    chunks = chunk_text(text)
-    embeddings = embed_chunks(chunks, model)
-    store_chunks(chunks, embeddings, url)
-    return {"message": f"{len(chunks)} chunks ingested from {url}"}
+async def ingest_url(
+        url: str,
+        model: SentenceTransformer = Depends(get_embedding_model),
+        service: IngestionService = Depends(get_ingestion_service)
+):
+    try:
+        count = service.ingest_content(
+            model=model,
+            url=url,
+            source_type=SourceTypeEnum.WEB
+        )
+        return {"status": "success", "ingested": count}
+
+    except IngestionError as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+    except DataBaseError as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+    except TimeOutError as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.post("/ask")
-def ask_question(request: Request, question: str = Query(...)):
-    model = request.app.state.model
-    query_vector = model.encode(question, normalize_embeddings=True).tolist()
-    docs = search_similar_documents(query_vector, top_k=5)
-    prompt = build_prompt(question, docs)
-    answer = query_llm(prompt)
-    return {"answer": answer}
+async def ask_question(
+        question: str = Query(...),
+        model: SentenceTransformer = Depends(get_embedding_model),
+        service: RagService = Depends(get_rag_service)
+):
+    try:
+        answer = await service.answer_question(
+            model=model,
+            question=question
+        )
+        return {"answer": answer}
+
+    except RagError as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+    except DataBaseError as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+    except TimeOutError as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
