@@ -1,8 +1,9 @@
 from typing import List, Dict
-from sqlalchemy import cast, literal, func
+from sqlalchemy import cast, literal, func, type_coerce, ARRAY, Float
+from pgvector.sqlalchemy import Vector
 from sqlalchemy.exc import SQLAlchemyError
 
-from rag_project.db.models.content import ContentORM, Vector
+from rag_project.db.models.content import ContentORM
 from rag_project.db.crud.base_crud import BaseCRUD
 from rag_project.domain.models import SourceTypeEnum
 from rag_project.db.crud.source import SourceCRUD
@@ -44,30 +45,32 @@ class ContentCRUD(BaseCRUD):
             self,
             query_vector: List[float],
             top_k: int = 5,
-            min_similarity: float = 0.7
+            min_similarity: float = 0.5
     ) -> List[dict]:
-        # FIXME: HINT: No function matches the given name and argument types. You might need to add explicit type casts.
-        # embedding_cast = cast(literal(query_vector), Vector(384))
-        # distance_op = ContentORM.embedding.cosine_distance(embedding_cast)
-        distance_op = func.cosine_distance(ContentORM.embedding, query_vector)
 
-        results = (
+        casted_vector = cast(query_vector, Vector)
+        distance_op = func.cosine_distance(ContentORM.embedding, casted_vector)
+        similarity_op = literal(1.0) - distance_op  # Similarity direct calculation
+
+        query = (
             self.session.query(
                 ContentORM,
+                similarity_op.label("similarity"),
                 distance_op.label("distance")
             )
-            .filter(distance_op < (1 - min_similarity))
+            .filter(similarity_op >= min_similarity)  # More intuitif tahn distance
             .order_by(distance_op)
             .limit(top_k)
-            .all()
         )
+
+        results = query.all()
 
         return [{
             'id': content.id,
             'content': content.content,
-            'similarity': 1 - distance,  # Convert distance to similarity
-            'source': content.source.path_to_content if content.source else None
-        } for content, distance in results]
+            'similarity': float(similarity),  # Convert distance to similarity
+            'source_id': content.source_id
+        } for content, similarity, _distance in results]
 
     def bulk_insert(self, contents: List[Dict], source_id: int) -> int:
         # Massive Insert

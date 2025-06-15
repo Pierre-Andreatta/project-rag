@@ -1,3 +1,5 @@
+# TODO: set optimum max_tokens (see token_limite in rag_service)
+
 from typing import List
 
 

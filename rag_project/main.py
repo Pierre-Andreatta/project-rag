@@ -57,7 +57,7 @@ async def ask_question(
         service: RagService = Depends(get_rag_service)
 ):
     try:
-        answer = service.answer_question(
+        answer = await service.answer_question(
             model=model,
             question=question
         )

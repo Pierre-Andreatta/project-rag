@@ -1,5 +1,5 @@
 import json
-from sqlalchemy import Column, Integer, DateTime, Text, ForeignKey, Index
+from sqlalchemy import Column, Integer, DateTime, Text, ForeignKey, Index, Float
 from sqlalchemy.orm import relationship
 from sqlalchemy.types import UserDefinedType
 from sqlalchemy.sql import func
@@ -15,20 +15,6 @@ class Vector(UserDefinedType):
     def get_col_spec(self) -> str:
         return f"VECTOR({self.dim})"
 
-    def bind_processor(self, dialect):
-        def process(value):
-            if isinstance(value, list):
-                return f"[{','.join(str(v) for v in value)}]"
-            return value
-        return process
-
-    def result_processor(self, dialect, coltype):
-        def process(value):
-            if isinstance(value, str):
-                return json.loads(value)
-            return value
-        return process
-
 
 class ContentORM(Base):
     __tablename__ = 'contents'
@@ -39,7 +25,8 @@ class ContentORM(Base):
     created_at = Column(DateTime, server_default=func.now())
     last_accessed = Column(DateTime)
 
-    # source = relationship("Source", backref="contents")
+    def cosine_distance(self, other):
+        return func.cosine_distance(self.embedding, other)
 
     __table_args__ = (
         Index('ix_embedding_cosine', embedding,

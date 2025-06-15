@@ -1,3 +1,5 @@
+# TODO: set optimum token_limite
+
 import os
 from typing import List
 from openai import AsyncOpenAI
@@ -54,7 +56,7 @@ class RagService:
             if len(documents_data) < min_k:
                 raise RagError('Not enough information to answer')
             self.docs = [DocumentDomain(**doc_data) for doc_data in documents_data]
-            logger.info(f'docs {self.docs}')
+            logger.info(f'Found {len(self.docs)} documents')
         except Exception:
             raise
 
@@ -76,17 +78,7 @@ class RagService:
         except Exception:
             raise
 
-    # def query_llm(self):
-    #     try:
-    #         response = self.client.chat.completions.create(
-    #             model="gpt-4o-mini",
-    #             messages=[{"role": "user", "content": self.prompt}]
-    #         )
-    #         self.answer = response.choices[0].message.content
-    #     except Exception as e:
-    #         raise
-
-    @retry(stop=stop_after_attempt(3))
+    @retry(stop=stop_after_attempt(3), reraise=True)
     async def query_llm_async(self):
         try:
             response = await self.client.chat.completions.create(
@@ -98,14 +90,15 @@ class RagService:
             raise
 
     @db_session_manager
-    def answer_question(self, session: SessionLocal, model: SentenceTransformer, question: str,
-                        top_k: int = 6, min_k: int = 1) -> str:
+    async def answer_question(self, session: SessionLocal, model: SentenceTransformer, question: str,
+                              top_k: int = 6, min_k: int = 1) -> str:
         try:
             self.reset_state()
 
             self.embed_question(model, question)
             self.search_similar_documents(session, top_k=top_k, min_k=min_k)
-            self.query_llm_async()
+            self.build_prompt(question, language=LanguageEnum.FR)
+            self.answer = await self.query_llm_async()
 
             return self.answer
 
