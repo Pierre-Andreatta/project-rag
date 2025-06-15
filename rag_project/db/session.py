@@ -20,7 +20,6 @@ engine = create_engine(f"postgresql+psycopg://{user}:{password}@{host}:5432/db")
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 
-@contextmanager
 def get_session():
     session = SessionLocal()
     try:

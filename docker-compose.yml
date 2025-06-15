@@ -39,7 +39,7 @@ services:
     command: >
       sh -c "
       while ! nc -z db 5432; do sleep 2; done &&
-      psql postgresql://user:supersecret@db:5432/db -c 'CREATE EXTENSION IF NOT EXISTS vector' &&
+      PGPASSWORD=$POSTGRES_PASSWORD psql -h db -U $POSTGRES_USER -d $POSTGRES_DB -c 'CREATE EXTENSION IF NOT EXISTS vector' &&
       alembic upgrade head &&
       uvicorn rag_project.main:app --host 0.0.0.0 --port 8000
       "
