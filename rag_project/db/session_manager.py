@@ -50,8 +50,6 @@ def db_session_manager(fn):
                 session.rollback()
                 logger.error(error_log, exc_info=exc_info)
 
-            self.reset_state()
-
             logger.info("session closed")
             session.close()
 
