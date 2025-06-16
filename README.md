@@ -154,7 +154,7 @@ for text in chunks:
     ...
 ```
 
-- [ ] **Split document table** 
+- [X] **Split document table** 
 
 ```ContentORM```
 ```python
@@ -197,9 +197,7 @@ class SourceContentORM(Base):
     content = relationship("ContentORM", backref="source_links")
 ```
 
-- [ ] **DB optimizations:**
-
-  - [ ] Vectorial index on embedding (e.g. with ivfflat, hnsw)
+- [x] **Vectorial index on embedding** (e.g. with ivfflat, hnsw)
 
 ```sql
 CREATE INDEX ON contents USING ivfflat (embedding vector_cosine_ops) WITH (lists = 100);
@@ -214,6 +212,8 @@ CREATE INDEX ON contents USING ivfflat (embedding vector_cosine_ops) WITH (lists
 
 
 - [ ] **Implement async and multiprocessing**
+  - [x] async
+  - [ ] multiprocessing
 
 
 - [ ] **Create test suite with pytest**
