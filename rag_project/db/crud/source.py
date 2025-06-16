@@ -12,17 +12,17 @@ logger = get_logger(__name__)
 
 class SourceCRUD(BaseCRUD):
 
-    def create_source(self, path_to_content: str, source_type: SourceTypeEnum = SourceTypeEnum.DEFAULT) -> SourceORM:
-        source = SourceORM(path_to_content=path_to_content, source_type=source_type)
+    def create_source(self, source_path: str, source_type: SourceTypeEnum = SourceTypeEnum.DEFAULT) -> SourceORM:
+        source = SourceORM(source_path=source_path, source_type=source_type)
         self.session.add(source)
         return source
 
-    def get_or_create_source(self, path_to_content: str, source_type: SourceTypeEnum = SourceTypeEnum.DEFAULT) -> SourceORM:
-        source = self.get_source_by_path_to_content(path=path_to_content)
+    def get_or_create_source(self, source_path: str, source_type: SourceTypeEnum = SourceTypeEnum.DEFAULT) -> SourceORM:
+        source = self.get_source_by_path_to_content(path=source_path)
 
         if not source:
             source = self.create_source(
-                path_to_content=path_to_content,
+                source_path=source_path,
                 source_type=source_type
             )
             self.session.flush()
@@ -30,7 +30,7 @@ class SourceCRUD(BaseCRUD):
         return source
 
     def get_source_by_path_to_content(self, path: str) -> Optional[SourceORM]:
-        stmt = select(SourceORM).where(path == SourceORM.path_to_content)
+        stmt = select(SourceORM).where(path == SourceORM.source_path)
         return self.session.execute(stmt).scalar_one_or_none()
 
     def get_source_by_id(self, source_id: int) -> Optional[SourceORM]:

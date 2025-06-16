@@ -23,11 +23,11 @@ class ContentCRUD(BaseCRUD):
             self,
             chunks: List[str],
             embeddings: List[List[float]],
-            source_url: str,
+            source_path: str,
             source_type: SourceTypeEnum = SourceTypeEnum.DEFAULT
     ) -> int:
 
-        source = self.source_crud.get_or_create_source(source_url, source_type)
+        source = self.source_crud.get_or_create_source(source_path, source_type)
 
         contents = [
             ContentORM(

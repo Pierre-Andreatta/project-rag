@@ -34,7 +34,7 @@ class CategoryORM(Base):
 class SourceORM(Base):
     __tablename__ = 'sources'
     id = Column(Integer, primary_key=True)
-    path_to_content = Column(String(500), unique=True, nullable=False)
+    source_path = Column(String(500), unique=True, nullable=False)
     source_type = Column(Enum(SourceTypeEnum), nullable=False)
     is_accepted = Column(Boolean, default=True, nullable=False)
     rejection_reason = Column(Enum(RejectReasonEnum), ForeignKey('reject_reasons.reason'), nullable=True)
@@ -55,7 +55,7 @@ class SourceORM(Base):
     )
 
     __table_args__ = (
-        Index('idx_source_path', path_to_content),
+        Index('idx_source_path', source_path),
         Index('idx_source_status', is_accepted),
         Index('idx_rejection_reason', rejection_reason),
         Index('idx_source_created_at', created_at.desc())

@@ -16,6 +16,7 @@ class Vector(UserDefinedType):
         return f"VECTOR({self.dim})"
 
 
+# TODO: Create association tables with sources (Many-to-many)
 class ContentORM(Base):
     __tablename__ = 'contents'
     id = Column(Integer, primary_key=True)
