@@ -39,13 +39,13 @@ class ContentCRUD(BaseCRUD):
         ]
 
         self.session.bulk_save_objects(contents)  # FIXME: check if need bulk_save_objects
-        return len(contents)
+        return len(contents)  # Remove: count of elements to insert, not inserted
 
     def find_similar_contents(
             self,
             query_vector: List[float],
-            top_k: int = 5,
-            min_similarity: float = 0.5
+            top_k: int,
+            min_similarity: float
     ) -> List[dict]:
 
         casted_vector = cast(query_vector, Vector)
