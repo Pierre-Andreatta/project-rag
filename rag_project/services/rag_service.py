@@ -20,48 +20,40 @@ from rag_project.utils.tokenizer import count_tokens
 logger = get_logger(__name__)
 
 
+def embed_question(model: SentenceTransformer, question: str) -> List:
+    try:
+        if len(question) < 5:
+            raise RagError(f'Question {question} not valid')
+        return model.encode(question, normalize_embeddings=True).tolist()
+    except Exception:
+        raise
+
+
 class RagService:
     def __init__(
             self,
             session_factory=SessionLocal,
-            llm_model="gpt-3.5-turbo"
+            llm_model="gpt-3.5-turbo",
+            min_similarity: int = 0.3
     ):
         self.session_factory = session_factory
         self.client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
         self.llm_model = llm_model
-        self.min_similarity = 0.3
-        self.query_vector = []
-        self.docs = []
-        self.prompt = []
-        self.answer = ''
+        self.min_similarity = min_similarity
 
-    def reset_state(self):
-        # Reset processes states
-        self.query_vector = []
-        self.docs: List[DocumentDomain] = []
-        self.prompt = ''
-        self.answer = ''
-
-    def embed_question(self, model: SentenceTransformer, question: str):
-        try:
-            if len(question) < 5:
-                raise RagError(f'Question {question} not valid')
-            self.query_vector = model.encode(question, normalize_embeddings=True).tolist()
-        except Exception:
-            raise
-
-    def search_similar_documents(self, session: SessionLocal, top_k: int, min_k: int):
+    def search_similar_documents(self, session: SessionLocal, query_vector: List, top_k: int, min_k: int) -> List[DocumentDomain]:
         try:
             content_crud = ContentCRUD(session)
-            documents_data = content_crud.find_similar_contents(self.query_vector, top_k, self.min_similarity)
+            documents_data = content_crud.find_similar_contents(query_vector, top_k, self.min_similarity)
             if len(documents_data) < min_k:
                 raise RagError('Not enough information to answer')
-            self.docs = [DocumentDomain(**doc_data) for doc_data in documents_data]
-            logger.info(f'Found {len(self.docs)} documents')
+            docs = [DocumentDomain(**doc_data) for doc_data in documents_data]
+            logger.info(f'Found {len(docs)} documents')
+            return docs
         except Exception:
             raise
 
-    def adapt_prompt_to_fit_token_limit(self, docs: List[DocumentDomain], base_tokens_count, token_limit):
+    def trim_documents_to_fit_token_limit(self, docs: List[DocumentDomain], base_tokens_count: int, token_limit: int):
 
         current_docs = docs.copy()
         context = "\n\n".join([doc.content for doc in current_docs])
@@ -86,7 +78,7 @@ class RagService:
         context = "\n\n".join([doc.content for doc in current_docs])
         return current_docs, context
 
-    def build_prompt(self, question: str, language: LanguageEnum = LanguageEnum.FR, token_limit: int = 1600):
+    def build_prompt(self, question: str, docs: List[DocumentDomain], language: LanguageEnum = LanguageEnum.FR, token_limit: int = 1600) -> str:
         try:
 
             if not isinstance(language, LanguageEnum):
@@ -96,21 +88,21 @@ class RagService:
 
             base_tokens_count = prompt_obj.tokens + count_tokens(question, model_name=self.llm_model)
 
-            current_docs, context = self.adapt_prompt_to_fit_token_limit(
-                docs=self.docs, base_tokens_count=base_tokens_count, token_limit=token_limit
+            current_docs, context = self.trim_documents_to_fit_token_limit(
+                docs=docs, base_tokens_count=base_tokens_count, token_limit=token_limit
             )
 
-            self.prompt = prompt_obj.content.format(question=question, context=context)
+            return prompt_obj.content.format(question=question, context=context)
 
         except Exception:
             raise
 
     @retry(stop=stop_after_attempt(3), reraise=True)
-    async def query_llm_async(self):
+    async def query_llm_async(self, prompt: str) -> str:
         try:
             response = await self.client.chat.completions.create(
                 model=self.llm_model,
-                messages=[{"role": "user", "content": self.prompt}]
+                messages=[{"role": "user", "content": prompt}]
             )
             return response.choices[0].message.content
         except Exception as e:
@@ -120,16 +112,12 @@ class RagService:
     async def answer_question(self, session: SessionLocal, model: SentenceTransformer, question: str,
                               top_k: int = 5, min_k: int = 1) -> str:
         try:
-            self.reset_state()
+            query_vector = embed_question(model, question)
+            docs = self.search_similar_documents(session, query_vector=query_vector, top_k=top_k, min_k=min_k)
+            prompt = self.build_prompt(question, docs=docs, language=LanguageEnum.FR)
 
-            self.embed_question(model, question)
-            self.search_similar_documents(session, top_k=top_k, min_k=min_k)
-            self.build_prompt(question, language=LanguageEnum.FR)
-            self.answer = await self.query_llm_async()
-
-            return self.answer
+            return await self.query_llm_async(prompt)
 
         except Exception as e:
-            message = f"answer_question : {str(e)}"
-            logger.error(message)
+            logger.error(f"answer_question : {str(e)}")
             raise

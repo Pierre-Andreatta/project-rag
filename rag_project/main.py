@@ -36,8 +36,8 @@ async def ingest_url(
     try:
         count = service.ingest_content(
             model=model,
-            url=url,
-            source_type=SourceTypeEnum.WEB
+            source_type=SourceTypeEnum.WEB,
+            source_path=url
         )
         return {"status": "success", "ingested chunks": count}
 
