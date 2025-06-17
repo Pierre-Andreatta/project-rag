@@ -1,6 +1,5 @@
 import json
-from sqlalchemy import Column, Integer, DateTime, Text, ForeignKey, Index, Float
-from sqlalchemy.orm import relationship
+from sqlalchemy import Column, Integer, DateTime, Text, ForeignKey, Index
 from sqlalchemy.types import UserDefinedType
 from sqlalchemy.sql import func
 from rag_project.db.base import Base

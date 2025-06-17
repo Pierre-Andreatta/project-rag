@@ -1,16 +1,4 @@
-from pydantic import BaseModel
-from typing import Optional
 from enum import Enum
-
-
-class DocumentDomain(BaseModel):
-    id: int
-    content: str
-    similarity: float
-    source_id: Optional[int] = None
-
-    class Config:
-        exclude_none = True
 
 
 class SourceTypeEnum(str, Enum):

@@ -1,4 +1,4 @@
-from rag_project.domain.models import LanguageEnum
+from rag_project.domain.enums import LanguageEnum
 
 
 class RagPrompt:

@@ -5,7 +5,7 @@ from sentence_transformers import SentenceTransformer
 from rag_project.db.crud.content import ContentCRUD
 from rag_project.db.session import SessionLocal
 from rag_project.db.session_manager import db_session_manager
-from rag_project.domain.models import SourceTypeEnum
+from rag_project.dto.models import SourceTypeEnum
 from rag_project.exceptions import IngestionError
 from rag_project.logger import get_logger
 from rag_project.services.scraping_service import default_scraper

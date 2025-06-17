@@ -2,7 +2,8 @@ from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Boolean, E
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from rag_project.db.base import Base
-from rag_project.domain.models import SourceTypeEnum, RejectReasonEnum
+from rag_project.domain.enums import RejectReasonEnum
+from rag_project.dto.models import SourceTypeEnum
 
 
 class RejectReasonORM(Base):

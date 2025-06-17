@@ -3,7 +3,7 @@ from sentence_transformers import SentenceTransformer
 from contextlib import asynccontextmanager
 
 from rag_project.api.dependencies import get_embedding_model, get_ingestion_service, get_rag_service
-from rag_project.domain.models import SourceTypeEnum
+from rag_project.dto.models import SourceTypeEnum
 from rag_project.exceptions import IngestionError, DataBaseError, TimeOutError, RagError
 from rag_project.logger import get_logger
 from rag_project.services.ingestion_service import IngestionService
@@ -65,7 +65,14 @@ async def ask_question(
             model=model,
             question=question
         )
-        return {"answer": answer}
+        return {"answer": answer.answer, "sources": [
+            {
+                'source_type': source.source_type,
+                'source_path': source.source_path
+            } for source in answer.sources
+        ]}
+        # TODO: uncomment when front deployed
+        # return {"answer": answer.answer, "sources": answer.sources}
 
     except RagError as e:
         raise HTTPException(status_code=500, detail=str(e))

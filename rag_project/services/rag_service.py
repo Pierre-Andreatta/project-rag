@@ -1,16 +1,18 @@
 # TODO: set optimum token_limite
 
 import os
-from typing import List
+from typing import List, Tuple
 from openai import AsyncOpenAI
 from tenacity import retry, stop_after_attempt
 
 from sentence_transformers import SentenceTransformer
 
 from rag_project.db.crud.content import ContentCRUD
+from rag_project.db.crud.source import SourceCRUD
 from rag_project.db.session import SessionLocal
 from rag_project.db.session_manager import db_session_manager
-from rag_project.domain.models import DocumentDomain, LanguageEnum
+from rag_project.domain.enums import LanguageEnum
+from rag_project.dto.models import DocumentDto, SourceDto, AnswerDto
 from rag_project.exceptions import RagError
 from rag_project.logger import get_logger
 
@@ -41,19 +43,38 @@ class RagService:
         self.llm_model = llm_model
         self.min_similarity = min_similarity
 
-    def search_similar_documents(self, session: SessionLocal, query_vector: List, top_k: int, min_k: int) -> List[DocumentDomain]:
+    def search_similar_documents(
+            self,
+            session: SessionLocal,
+            query_vector: List,
+            top_k: int,
+            min_k: int
+    ) -> tuple[List[DocumentDto], List[SourceDto]]:
         try:
             content_crud = ContentCRUD(session)
-            documents_data = content_crud.find_similar_contents(query_vector, top_k, self.min_similarity)
-            if len(documents_data) < min_k:
+            source_crud = SourceCRUD(session)
+
+            documents = content_crud.find_similar_contents(query_vector, top_k, self.min_similarity)
+
+            if len(documents) < min_k:
                 raise RagError('Not enough information to answer')
-            docs = [DocumentDomain(**doc_data) for doc_data in documents_data]
-            logger.info(f'Found {len(docs)} documents')
-            return docs
-        except Exception:
+
+            sources: List[SourceDto] = []
+            for document in documents:
+                if document.source_data.id:
+                    source = source_crud.get_source_by_id(document.source_data.id)
+                    if source:
+                        document.source_data = source
+                        sources.append(source)
+
+            logger.info(f'Found {len(documents)} documents')
+            logger.info(f'Documents {[doc.__dict__ for doc in documents]}')
+            return documents, sources
+        except Exception as e:
+            logger.error(f"search_similar_documents: {e}", exc_info=True)
             raise
 
-    def trim_documents_to_fit_token_limit(self, docs: List[DocumentDomain], base_tokens_count: int, token_limit: int):
+    def trim_documents_to_fit_token_limit(self, docs: List[DocumentDto], base_tokens_count: int, token_limit: int):
 
         current_docs = docs.copy()
         context = "\n\n".join([doc.content for doc in current_docs])
@@ -78,7 +99,8 @@ class RagService:
         context = "\n\n".join([doc.content for doc in current_docs])
         return current_docs, context
 
-    def build_prompt(self, question: str, docs: List[DocumentDomain], language: LanguageEnum = LanguageEnum.FR, token_limit: int = 1600) -> str:
+    def build_prompt(self, question: str, docs: List[DocumentDto], language: LanguageEnum = LanguageEnum.FR,
+                     token_limit: int = 1600) -> str:
         try:
 
             if not isinstance(language, LanguageEnum):
@@ -110,13 +132,15 @@ class RagService:
 
     @db_session_manager
     async def answer_question(self, session: SessionLocal, model: SentenceTransformer, question: str,
-                              top_k: int = 5, min_k: int = 1) -> str:
+                              top_k: int = 5, min_k: int = 1) -> AnswerDto:
         try:
             query_vector = embed_question(model, question)
-            docs = self.search_similar_documents(session, query_vector=query_vector, top_k=top_k, min_k=min_k)
-            prompt = self.build_prompt(question, docs=docs, language=LanguageEnum.FR)
+            documents, sources = self.search_similar_documents(session, query_vector=query_vector, top_k=top_k,
+                                                               min_k=min_k)
+            prompt = self.build_prompt(question, docs=documents, language=LanguageEnum.FR)
+            answer = await self.query_llm_async(prompt)
 
-            return await self.query_llm_async(prompt)
+            return AnswerDto(answer=answer, sources=sources)
 
         except Exception as e:
             logger.error(f"answer_question : {str(e)}")

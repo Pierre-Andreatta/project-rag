@@ -1,13 +1,11 @@
 from typing import List, Dict
-from sqlalchemy import cast, literal, func, type_coerce, ARRAY, Float
+from sqlalchemy import cast, literal, func
 from pgvector.sqlalchemy import Vector
-from sqlalchemy.exc import SQLAlchemyError
 
 from rag_project.db.models.content import ContentORM
 from rag_project.db.crud.base_crud import BaseCRUD
-from rag_project.domain.models import SourceTypeEnum
+from rag_project.dto.models import SourceTypeEnum, DocumentDto
 from rag_project.db.crud.source import SourceCRUD
-from rag_project.exceptions import DataBaseError
 from rag_project.logger import get_logger
 
 logger = get_logger(__name__)
@@ -46,31 +44,34 @@ class ContentCRUD(BaseCRUD):
             query_vector: List[float],
             top_k: int,
             min_similarity: float
-    ) -> List[dict]:
+    ) -> List[DocumentDto]:
+        try:
+            casted_vector = cast(query_vector, Vector)
+            distance_op = func.cosine_distance(ContentORM.embedding, casted_vector)
+            similarity_op = literal(1.0) - distance_op  # Similarity direct calculation
 
-        casted_vector = cast(query_vector, Vector)
-        distance_op = func.cosine_distance(ContentORM.embedding, casted_vector)
-        similarity_op = literal(1.0) - distance_op  # Similarity direct calculation
-
-        query = (
-            self.session.query(
-                ContentORM,
-                similarity_op.label("similarity"),
-                distance_op.label("distance")
+            query = (
+                self.session.query(
+                    ContentORM,
+                    similarity_op.label("similarity"),
+                    distance_op.label("distance")
+                )
+                .filter(similarity_op >= min_similarity)  # More intuitif tahn distance
+                .order_by(distance_op)
+                .limit(top_k)
             )
-            .filter(similarity_op >= min_similarity)  # More intuitif tahn distance
-            .order_by(distance_op)
-            .limit(top_k)
-        )
 
-        results = query.all()
+            results = query.all()
 
-        return [{
-            'id': content.id,
-            'content': content.content,
-            'similarity': float(similarity),  # Convert distance to similarity
-            'source_id': content.source_id
-        } for content, similarity, _distance in results]
+            return [DocumentDto(
+                id=content.id,
+                content=content.content,
+                similarity=float(similarity),
+                source_data=self.source_crud.get_source_by_id(content.source_id)
+            ) for content, similarity, _distance in results]
+        except Exception as e:
+            logger.error(f"find_similar_contents; {e}")
+            raise
 
     def bulk_insert(self, contents: List[Dict], source_id: int) -> int:
         # Massive Insert
