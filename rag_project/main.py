@@ -30,13 +30,14 @@ app = FastAPI(
 @app.post("/ingest-url")
 async def ingest_url(
         url: str,
+        source_type: SourceTypeEnum,
         model: SentenceTransformer = Depends(get_embedding_model),
         service: IngestionService = Depends(get_ingestion_service)
 ):
     try:
         count = service.ingest_content(
             model=model,
-            source_type=SourceTypeEnum.WEB,
+            source_type=source_type,
             source_path=url
         )
         return {"status": "success", "ingested chunks": count}

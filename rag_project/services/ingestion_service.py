@@ -9,6 +9,7 @@ from rag_project.dto.models import SourceTypeEnum
 from rag_project.exceptions import IngestionError
 from rag_project.logger import get_logger
 from rag_project.services.scraping_service import default_scraper
+from rag_project.services.transcription_service import TranscriptionService
 from rag_project.utils.text_processing import default_chunker
 
 
@@ -44,14 +45,20 @@ class IngestionService:
             self,
             session_factory=SessionLocal,
             scraper=None,
-            chunker=None
+            chunker=None,
+            transcriber=None
     ):
         self.session_factory = session_factory
         self.scraper = scraper or default_scraper
         self.chunker = chunker or default_chunker
+        self.transcriber = transcriber or TranscriptionService()
 
     def content_from_youtube(self, youtube_url: str):
-        raise NotImplementedError("YouTube ingestion not implemented yet")
+        try:
+            return self.transcriber.transcribe_youtube(youtube_url)
+        except Exception as e:
+            logger.error(f"content_from_youtube : {str(e)}")
+            raise
 
     def content_from_pdf(self, path: str):
         raise NotImplementedError("Local ingestion not implemented yet")
