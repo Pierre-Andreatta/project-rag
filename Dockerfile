@@ -10,6 +10,7 @@ RUN apt-get update && \
     postgresql-client \
     python3-dev \
     netcat-openbsd \
+    ffmpeg \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt .
