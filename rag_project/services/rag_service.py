@@ -36,7 +36,7 @@ class RagService:
             self,
             session_factory=SessionLocal,
             llm_model="gpt-3.5-turbo",
-            min_similarity: int = 0.3
+            min_similarity: int = 0.4
     ):
         self.session_factory = session_factory
         self.client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
@@ -65,7 +65,8 @@ class RagService:
                     source = source_crud.get_source_by_id(document.source_data.id)
                     if source:
                         document.source_data = source
-                        sources.append(source)
+                        if source not in sources:
+                            sources.append(source)
 
             logger.info(f'Found {len(documents)} documents')
             logger.info(f'Documents {[doc.__dict__ for doc in documents]}')

@@ -15,10 +15,14 @@ class SourceCRUD(BaseCRUD):
     def create_source(self, source_path: str, source_type: SourceTypeEnum = SourceTypeEnum.DEFAULT) -> SourceDto:
         source_orm = SourceORM(source_path=source_path, source_type=source_type)
         self.session.add(source_orm)
+        self.session.flush()
         return SourceDto.from_orm(source_orm)
 
     def get_or_create_source(self, source_path: str, source_type: SourceTypeEnum = SourceTypeEnum.DEFAULT) -> SourceDto:
         try:
+            # TODO: handle source update if content is added to existing source
+            #       -> sources.updated_at
+            #       Currently : sources not updated and content added in addition to the previous one
             source = self.get_source_by_path_to_content(path=source_path)
 
             if not source:
@@ -26,8 +30,6 @@ class SourceCRUD(BaseCRUD):
                     source_path=source_path,
                     source_type=source_type
                 )
-                self.session.flush()
-
             return source
 
         except Exception as e:
@@ -37,7 +39,8 @@ class SourceCRUD(BaseCRUD):
     def get_source_by_path_to_content(self, path: str) -> Optional[SourceDto]:
         stmt = select(SourceORM).where(path == SourceORM.source_path)
         source_orm = self.session.execute(stmt).scalar_one_or_none()
-        return SourceDto.from_orm(source_orm)
+        if source_orm:
+            return SourceDto.from_orm(source_orm)
 
     def get_source_by_id(self, source_id: int) -> Optional[SourceDto]:
         try:
