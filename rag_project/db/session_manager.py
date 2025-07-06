@@ -30,15 +30,11 @@ def db_session_manager(fn):
         except RagError as e:
             error_log = f"Rag Error during transaction: {str(e)}"
             exc_info = e.exc_info
-            raise IngestionError(message=error_log, code=500) from e
+            raise RagError(message=error_log, code=500) from e
 
         except Timeout as e:
             error_log = f"TimeOut Error during transaction: {str(e)}"
             raise TimeOutError(message=error_log, code=500) from e
-
-        except TypeError as e:
-            error_log = f"TypeError Error during transaction: {str(e)}"
-            raise DataBaseError(message=error_log, code=500) from e
 
         except Exception as e:
             error_log = f"Unexpected Error during transaction: {str(e)}"

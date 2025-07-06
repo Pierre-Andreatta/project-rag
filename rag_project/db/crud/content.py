@@ -1,11 +1,13 @@
 from typing import List, Dict
 from sqlalchemy import cast, literal, func
 from pgvector.sqlalchemy import Vector
+from sqlalchemy.exc import SQLAlchemyError
 
 from rag_project.db.models.content import ContentORM
 from rag_project.db.crud.base_crud import BaseCRUD
 from rag_project.dto.models import SourceTypeEnum, DocumentDto
 from rag_project.db.crud.source import SourceCRUD
+from rag_project.exceptions import DataBaseError
 from rag_project.logger import get_logger
 
 logger = get_logger(__name__)
@@ -25,19 +27,32 @@ class ContentCRUD(BaseCRUD):
             source_type: SourceTypeEnum = SourceTypeEnum.DEFAULT
     ) -> int:
 
-        source = self.source_crud.get_or_create_source(source_path, source_type)
+        if not chunks or not embeddings:
+            raise DataBaseError("Chunks and embeddings cannot be empty")
 
-        contents = [
-            ContentORM(
-                content=text,
-                embedding=emb,
-                source_id=source.id
-            )
-            for text, emb in zip(chunks, embeddings)
-        ]
+        if len(chunks) != len(embeddings):
+            raise DataBaseError(f"Mismatch between chunks ({len(chunks)}) and embeddings ({len(embeddings)})")
 
-        self.session.bulk_save_objects(contents)  # FIXME: check if need bulk_save_objects
-        return len(contents)  # Remove: count of elements to insert, not inserted
+        try:
+            source = self.source_crud.get_or_create_source(source_path, source_type)
+
+            contents = [
+                ContentORM(
+                    content=text,
+                    embedding=emb,
+                    source_id=source.id
+                ) for text, emb in zip(chunks, embeddings)
+            ]
+
+            self.session.bulk_save_objects(contents)
+            self.session.flush()
+
+            logger.info(f"Successfully stored {len(contents)} chunks")
+            return len(contents)
+
+        except SQLAlchemyError as e:
+            message = f"store_chunks: {str(e)}"
+            raise DataBaseError(message) from e
 
     def find_similar_contents(
             self,
@@ -69,9 +84,9 @@ class ContentCRUD(BaseCRUD):
                 similarity=float(similarity),
                 source_data=self.source_crud.get_source_by_id(content.source_id)
             ) for content, similarity, _distance in results]
-        except Exception as e:
-            logger.error(f"find_similar_contents; {e}")
-            raise
+        except SQLAlchemyError as e:
+            message = f"find_similar_contents: {e}"
+            raise DataBaseError(message) from e
 
     def bulk_insert(self, contents: List[Dict], source_id: int) -> int:
         # Massive Insert
@@ -82,5 +97,9 @@ class ContentCRUD(BaseCRUD):
                 source_id=source_id
             ) for c in contents
         ]
-        self.session.bulk_save_objects(contents)
-        return len(contents)
+        try:
+            self.session.bulk_save_objects(contents)
+            return len(contents)
+        except SQLAlchemyError as e:
+            message = f"bulk_insert: {str(e)}"
+            raise DataBaseError(message) from e
