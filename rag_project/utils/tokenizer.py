@@ -14,5 +14,10 @@ def get_tokenizer(model_name: str) -> tiktoken.core.Encoding:
 
 
 def count_tokens(text: str, model_name: str) -> int:
-    tokenizer = get_tokenizer(model_name)
-    return len(tokenizer.encode(text))
+    try:
+        tokenizer = get_tokenizer(model_name)
+        return len(tokenizer.encode(text))
+    except Exception as e:
+        message = f"count_tokens: {e}"
+        logger.error(message)
+        raise message

@@ -96,8 +96,9 @@ class SourceCRUD(BaseCRUD):
 
             source = self.get_source_by_id(source_id)
             if not source:
-                logger.warning(f"Cannot approve non-existent source: {source_id}")
-                # TODO: raise error ?
+                message = f"Source: {source_id} not found"
+                logger.error(message)
+                raise DataBaseError(message)
 
             rows_updated = self.session.query(
                 SourceORM

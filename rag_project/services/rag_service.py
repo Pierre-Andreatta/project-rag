@@ -1,7 +1,7 @@
 # TODO: set optimum token_limite
 
 import os
-from typing import List, Tuple
+from typing import List
 from openai import AsyncOpenAI, OpenAIError
 from tenacity import retry, stop_after_attempt
 
@@ -13,7 +13,7 @@ from rag_project.db.session import SessionLocal
 from rag_project.db.session_manager import db_session_manager
 from rag_project.domain.enums import LanguageEnum
 from rag_project.dto.models import DocumentDto, SourceDto, AnswerDto
-from rag_project.exceptions import RagError, ValidationError, EmbeddingError, DataBaseError
+from rag_project.exceptions import RagError, ValidationError, EmbeddingError, DataBaseError, LLMError
 from rag_project.logger import get_logger
 
 from rag_project.domain.rag_prompts import RagPromptFactory
@@ -197,8 +197,9 @@ class RagService:
             )
 
             if not response.choices or not response.choices[0].message.content:
-                # raise LLMError("Empty response from LLM")
-                raise RagError("Empty response from LLM")
+                message = "Empty response from LLM"
+                logger.error(message)
+                raise LLMError(message)
 
             return response.choices[0].message.content
 
@@ -207,13 +208,11 @@ class RagService:
         except OpenAIError as e:
             message = f"OpenAI API error: {e}"
             logger.error(message)
-            # raise LLMError(message) from e
-            raise RagError(message) from e
+            raise LLMError(message) from e
         except RagError as e:
             message = f"Failed to query LLM: {e}"
             logger.error(message)
-            # raise LLMError(message) from e
-            raise RagError(message) from e
+            raise LLMError(message) from e
 
     @db_session_manager
     async def answer_question(self, session: SessionLocal, model: SentenceTransformer, question: str,
@@ -239,7 +238,7 @@ class RagService:
 
             return AnswerDto(answer=answer, sources=sources)
 
-        except (ValidationError, EmbeddingError, DataBaseError):  # add SearchError, PromptError, LLMError
+        except (ValidationError, EmbeddingError, DataBaseError, LLMError):  # add SearchError, PromptError
             raise
         except Exception as e:
             message = f"Failed to answer question: {str(e)}"
