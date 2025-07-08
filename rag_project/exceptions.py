@@ -24,9 +24,34 @@ class TranscriptionError(Exception):
         self.code = code
 
 
+class EmbeddingError(Exception):
+    def __init__(self, message: str, code: int = None):
+        super().__init__(message)
+        self.code = code
+
+
+class TextProcessingError(Exception):
+    def __init__(self, message: str, code: int = None):
+        super().__init__(message)
+        self.code = code
+
+
+class LLMError(Exception):
+    def __init__(self, message: str, code: int = None):
+        super().__init__(message)
+        self.code = code
+
+
 class DataBaseError(Exception):
     def __init__(self, message: str, code: int = None):
         super().__init__(message)
+        self.code = code
+
+
+class ValidationError(Exception):
+    def __init__(self, message: str, code: int = None, field: str = None):
+        super().__init__(message)
+        self.field = field
         self.code = code
 
 
