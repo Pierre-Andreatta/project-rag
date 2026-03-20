@@ -20,3 +20,9 @@ class RejectReasonEnum(str, Enum):
 class LanguageEnum(str, Enum):
     FR = "fr"
     EN = "en"
+
+
+class IngestionStatus(str, Enum):
+    SUCCESS = "success"
+    PARTIAL_SUCCESS = "partial_success"
+    FAILED = "failed"

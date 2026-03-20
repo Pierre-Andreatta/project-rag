@@ -59,7 +59,7 @@ class SourceCRUD(BaseCRUD):
             raise ValidationError("Path cannot be empty", field="path")
 
         try:
-            stmt = select(SourceORM).where(SourceORM.source_path == path.strip())
+            stmt = select(SourceORM).where(SourceORM.source_path.is_(path.strip()))
             source_orm = self.session.execute(stmt).scalar_one_or_none()
 
             if source_orm:
@@ -103,7 +103,7 @@ class SourceCRUD(BaseCRUD):
             rows_updated = self.session.query(
                 SourceORM
             ).filter(
-                SourceORM.id == source_id
+                SourceORM.id.is_(source_id)
             ).update({
                 'is_accepted': True,
                 'rejection_reason_id': None
@@ -132,7 +132,7 @@ class SourceCRUD(BaseCRUD):
                 logger.warning(f"Cannot reject non-existent source: {source_id}")
                 # TODO: raise error ?
 
-            stmt = select(RejectReasonORM).where(RejectReasonORM.reason == reason)  # TODO: by id ?
+            stmt = select(RejectReasonORM).where(RejectReasonORM.reason.is_(reason))  # TODO: by id ?
             reason_obj = self.session.execute(stmt).scalar_one_or_none()
 
             if not reason_obj:
@@ -141,7 +141,7 @@ class SourceCRUD(BaseCRUD):
             rows_updated = self.session.query(
                 SourceORM
             ).filter(
-                SourceORM.id == source_id
+                SourceORM.id.is_(source_id)
             ).update({
                 'is_accepted': False,
                 'rejection_reason_id': reason_obj.id
@@ -165,10 +165,10 @@ class SourceCRUD(BaseCRUD):
         query = select(SourceORM)
 
         if only_accepted is not None:
-            query = query.where(SourceORM.is_accepted == only_accepted)
+            query = query.where(SourceORM.is_accepted.is_(only_accepted))
 
         if source_type is not None:
-            query = query.where(SourceORM.source_type == source_type)
+            query = query.where(SourceORM.source_type.is_(source_type))
 
         query = query.limit(limit)
         source_orm = list(self.session.execute(query).scalars())

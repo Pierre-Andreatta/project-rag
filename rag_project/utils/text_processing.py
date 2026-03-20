@@ -30,6 +30,8 @@ def default_chunker(text: str, max_tokens=300) -> List[str]:
         current = ""
         for sent in sentences:
             if len(current.split()) + len(sent.split()) < max_tokens:
+                # FIXME: not number of token but number of words
+                # TODO: add a token counter
                 current += sent + ". "
             else:
                 chunks.append(current.strip())

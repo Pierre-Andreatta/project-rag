@@ -19,25 +19,25 @@ def db_session_manager(fn):
             return result
 
         except SQLAlchemyError as e:
-            error_log = f"SQLAlchemy Error during transaction: {str(e)}"
+            error_log = f"SQLAlchemy Error: {str(e)}"
             raise DataBaseError(message=error_log, code=500) from e
 
         except IngestionError as e:
-            error_log = f"Ingestion Error during transaction: {str(e)}"
+            error_log = f"Ingestion Error: {str(e)}"
             exc_info = e.exc_info
-            raise IngestionError(message=error_log, code=500) from e
+            raise IngestionError(message=error_log, code=e.code or 400) from e
 
         except RagError as e:
-            error_log = f"Rag Error during transaction: {str(e)}"
+            error_log = f"Rag Error: {str(e)}"
             exc_info = e.exc_info
-            raise RagError(message=error_log, code=500) from e
+            raise RagError(message=error_log, code=e.code or 400) from e
 
         except Timeout as e:
-            error_log = f"TimeOut Error during transaction: {str(e)}"
-            raise TimeOutError(message=error_log, code=500) from e
+            error_log = f"TimeOut Error: {str(e)}"
+            raise TimeOutError(message=error_log, code=408) from e
 
         except Exception as e:
-            error_log = f"Unexpected Error during transaction: {str(e)}"
+            error_log = f"Unexpected Error: {str(e)}"
             raise UnexpectedError(message=error_log, code=500) from e
 
         finally:

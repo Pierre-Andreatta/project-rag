@@ -1,10 +1,15 @@
+# TODO: add filed to ValidationError
+
 from fastapi import FastAPI, Query, Depends, HTTPException
+from fastapi.exceptions import RequestValidationError
 from sentence_transformers import SentenceTransformer
 from contextlib import asynccontextmanager
 
 from rag_project.api.dependencies import get_embedding_model, get_ingestion_service, get_rag_service
-from rag_project.dto.models import SourceTypeEnum
-from rag_project.exceptions import IngestionError, DataBaseError, TimeOutError, RagError, ValidationError
+from rag_project.api.exception_handlers import ingestion_exception_handler, database_exception_handler, \
+    unexpected_exception_handler, validation_exception_handler
+from rag_project.exceptions import IngestionError, DataBaseError, TimeOutError, RagError, ValidationError, \
+    UnexpectedError
 from rag_project.logger import get_logger
 from rag_project.services.ingestion_service import IngestionService
 from rag_project.services.rag_service import RagService
@@ -26,41 +31,10 @@ app = FastAPI(
     description="Retrieval-augmented generation API project"
 )
 
-
-@app.post("/ingest-url")
-async def ingest_url(
-        url: str,
-        source_type: SourceTypeEnum,
-        model: SentenceTransformer = Depends(get_embedding_model),
-        service: IngestionService = Depends(get_ingestion_service)
-):
-    try:
-
-        if not url.strip():
-            raise ValidationError("URL cannot be empty")
-
-        count = service.ingest_content(
-            model=model,
-            source_type=source_type,
-            source_path=url
-        )
-        return {"status": "success", "ingested chunks": count}
-
-    except ValidationError as e:
-        logger.warning(f"Validation error: {e}")
-        raise HTTPException(status_code=400, detail=str(e))
-    except IngestionError as e:
-        logger.error(f"Ingestion failed: {e}")
-        raise HTTPException(status_code=422, detail=str(e))
-    except DataBaseError as e:
-        logger.error(f"Database error: {e}")
-        raise HTTPException(status_code=503, detail="Database service unavailable")
-    except TimeOutError as e:
-        logger.error(f"Timeout error: {e}")
-        raise HTTPException(status_code=504, detail="Request timeout")
-    except Exception as e:
-        logger.error(f"Unexpected error during ingestion: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail="Internal server error")
+app.add_exception_handler(IngestionError, ingestion_exception_handler)
+app.add_exception_handler(DataBaseError, database_exception_handler)
+app.add_exception_handler(UnexpectedError, unexpected_exception_handler)
+app.add_exception_handler(RequestValidationError, validation_exception_handler)
 
 
 @app.post("/ask")
