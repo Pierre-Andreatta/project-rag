@@ -1,7 +1,6 @@
 from functools import lru_cache
 
 from fastapi import Depends
-from sentence_transformers import SentenceTransformer
 from sqlalchemy.orm import Session
 
 from rag_project.application.ports.content_extraction.content_extraction_interface import ContentExtractorFactoryInterface
@@ -17,7 +16,7 @@ from rag_project.infrastructure.tokenizer.tiktoken_tokenizer_adapter import Tikt
 
 @lru_cache(maxsize=1)
 def _cached_content_extractor_factory() -> ContentExtractorFactoryInterface:
-    from rag_project.infrastructure.Content_extract.content_extractor import ContentExtractorFactory
+    from rag_project.infrastructure.content_extract.content_extractor import ContentExtractorFactory
     from rag_project.infrastructure.scraping.scraper import default_scraper
     from rag_project.infrastructure.transcription.whisper_transcription_adapter import WhisperTranscriptionAdapter
 
