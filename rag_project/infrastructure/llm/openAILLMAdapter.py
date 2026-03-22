@@ -3,8 +3,11 @@ from openai import AsyncOpenAI, OpenAIError
 from tenacity import retry, stop_after_attempt, wait_exponential
 
 from rag_project.exceptions import ValidationError, LLMError
-from rag_project.main import logger
 from rag_project.application.ports.llm.llm_interface import LLMInterface
+from rag_project.logger import get_logger
+
+
+logger = get_logger(__name__)
 
 
 class OpenAILLMAdapter(LLMInterface):

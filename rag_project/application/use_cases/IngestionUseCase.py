@@ -1,13 +1,10 @@
 from typing import List
 
 from rag_project.application.ports.embeddings.embedding_interface import EmbeddingInterface
-from rag_project.application.ports.repositories import ContentRepositoryInterface
+from rag_project.application.ports.repositories.ContentRepositoryInterface import ContentRepositoryInterface
 from rag_project.application.ports.content_extraction.content_extraction_interface import ContentExtractorFactoryInterface
 
 from rag_project.domain.enums import SourceTypeEnum
-
-from rag_project.infrastructure.db.session import SessionLocal
-from rag_project.infrastructure.db.session_manager import db_session_manager
 
 from rag_project.utils.text_processing import default_chunker
 from rag_project.exceptions import IngestionError, ValidationError
@@ -23,13 +20,11 @@ class IngestionUseCase:
             embedder: EmbeddingInterface,
             content_repository: ContentRepositoryInterface,
             content_extractor_factory: ContentExtractorFactoryInterface,
-            session_factory=SessionLocal,
             chunker=None,
     ):
         self.embedder = embedder
         self.content_repository = content_repository
         self.content_extractor_factory = content_extractor_factory
-        self.session_factory = session_factory
         self.chunker = chunker or default_chunker
 
     def _extract_content(self, source_type: SourceTypeEnum, source_path: str) -> str:
@@ -96,19 +91,16 @@ class IngestionUseCase:
             logger.error(message)
             raise IngestionError(message) from e
 
-    @db_session_manager
-    def ingest_content(self,
-                       session: SessionLocal,
-                       model,
-                       source_type: SourceTypeEnum,
-                       source_path: str,
-                       max_tokens: int = 300) -> int:
+    def ingest_content(
+            self,
+            source_type: SourceTypeEnum,
+            source_path: str,
+            max_tokens: int = 300,
+    ) -> int:
         """
         Complete ingestion pipeline using all ports.
 
         Args:
-            session: Database session
-            model: Embedding model (SentenceTransformer, etc.)
             source_type: Type of source (WEB, YOUTUBE, PDF)
             source_path: Path to the source
             max_tokens: Maximum tokens per chunk
@@ -117,7 +109,6 @@ class IngestionUseCase:
             Number of chunks stored
         """
         try:
-            # Validation des paramètres
             if source_type is None:
                 raise ValidationError("Source type must be provided", field="source_type")
             if source_path is None:
@@ -125,18 +116,15 @@ class IngestionUseCase:
 
             logger.info(f"Starting ingestion for {source_type} source: {source_path}")
 
-            # Extract content via Content Extraction Adapter
             text = self._extract_content(source_type, source_path)
 
-            # Chunk text
             chunks = self._chunk_text(text, max_tokens)
 
-            # Embed chunks via Embedding Adapter
             embeddings = self._embed_chunks(self.embedder, chunks)
 
-            # Store chunks via Storage Adapter
-            storage_adapter = self.content_repository(session)
-            chunks_count = self._store_chunks(storage_adapter, chunks, embeddings, source_path, source_type)
+            chunks_count = self._store_chunks(
+                self.content_repository, chunks, embeddings, source_path, source_type
+            )
 
             logger.info(f"Successfully ingested {chunks_count} chunks from {source_path}")
             return chunks_count

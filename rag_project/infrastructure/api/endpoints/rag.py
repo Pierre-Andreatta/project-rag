@@ -1,56 +1,50 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sentence_transformers import SentenceTransformer
 
-from rag_project.infrastructure.api.dependencies import get_embedding_model
-from rag_project.db.session_manager import db_session_manager
-from rag_project.db.session import SessionLocal
-from rag_project.domain.enums import LanguageEnum
-from rag_project.domain.models.models import ChatRequest, ChatResponse
-from tests import create_rag_service
+from rag_project.application.use_cases.RagUseCase import RagUseCase
+from rag_project.exceptions import DataBaseError, RagError, TimeOutError, ValidationError
+from rag_project.infrastructure.api.dependencies import get_embedding_model, get_rag_use_case
+from rag_project.logger import get_logger
 
-router = APIRouter()
+logger = get_logger(__name__)
+
+router = APIRouter(tags=["rag"])
 
 
-class RagAPI:
-    def __init__(self, session_factory):
-        self.session_factory = session_factory
-
-    @db_session_manager
-    async def chat(self, session, model, request: ChatRequest) -> ChatResponse:
-        """Chat endpoint avec gestion de session"""
-        service = create_rag_service(
-            model=model,
-            llm_model=request.llm_model or "gpt-3.5-turbo",
-            min_similarity=request.min_similarity or 0.4
-        )
+@router.post("/ask")
+async def ask_question(
+        question: str = Query(...),
+        model: SentenceTransformer = Depends(get_embedding_model),
+        service: RagUseCase = Depends(get_rag_use_case),
+):
+    try:
+        if not question.strip():
+            raise ValidationError("Question cannot be empty")
 
         answer = await service.answer_question(
-            session=session,
-            question=request.question,
-            top_k=request.top_k or 5,
-            min_k=request.min_k or 1,
-            language=request.language or LanguageEnum.FR
+            model=model,
+            question=question,
         )
+        return {"answer": answer.answer, "sources": [
+            {
+                "source_type": source.source_type,
+                "source_path": source.source_path,
+            }
+            for source in answer.sources
+        ]}
 
-        return ChatResponse(
-            response=answer.answer,
-            sources=[{
-                "id": source.id,
-                "path": source.path,
-                "type": source.type
-            } for source in answer.sources]
-        )
-
-
-rag_api = RagAPI(SessionLocal)
-
-
-@router.post("/chat", response_model=ChatResponse)
-async def chat_endpoint(
-    request: ChatRequest,
-    model: SentenceTransformer = Depends(get_embedding_model)
-) -> ChatResponse:
-    return await rag_api.chat(
-        model=model,
-        request=request
-    )
+    except ValidationError as e:
+        logger.warning(f"Validation error: {e}")
+        raise HTTPException(status_code=400, detail=str(e))
+    except RagError as e:
+        logger.error(f"RAG error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+    except DataBaseError as e:
+        logger.error(f"Database error: {e}")
+        raise HTTPException(status_code=503, detail="Database service unavailable")
+    except TimeOutError as e:
+        logger.error(f"Timeout error: {e}")
+        raise HTTPException(status_code=504, detail="Request timeout")
+    except Exception as e:
+        logger.error(f"Unexpected error during question processing: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")

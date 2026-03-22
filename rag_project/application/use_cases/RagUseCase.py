@@ -1,16 +1,9 @@
-# TODO: set optimum token_limite
-
-import os
 from typing import List
-from openai import AsyncOpenAI, OpenAIError
-from tenacity import retry, stop_after_attempt
 
-from sentence_transformers import SentenceTransformer
-
-from rag_project.infrastructure.db.repositories.content_repository import ContentRepository
-from rag_project.infrastructure.db.repositories.source_repository import SourceRepository
-from rag_project.infrastructure.db.session import SessionLocal
-from rag_project.infrastructure.db.session_manager import db_session_manager
+from rag_project.application.ports.embeddings.embedding_interface import EmbeddingInterface
+from rag_project.application.ports.llm.llm_interface import LLMInterface
+from rag_project.application.ports.repositories.ContentRepositoryInterface import ContentRepositoryInterface
+from rag_project.application.ports.repositories.SourceRepositoryInterface import SourceRepositoryInterface
 from rag_project.domain.enums import LanguageEnum
 from rag_project.domain.models.models import DocumentDto, SourceDto, AnswerDto
 from rag_project.exceptions import RagError, ValidationError, EmbeddingError, DataBaseError, LLMError
@@ -22,52 +15,28 @@ from rag_project.utils.tokenizer import count_tokens
 logger = get_logger(__name__)
 
 
-def embed_question(model: SentenceTransformer, question: str) -> List:
-    # TODO: move to ports
-    try:
-        if not question or not question.strip():
-            raise ValidationError("Question cannot be empty")
-
-        if len(question.strip()) < 5:
-            raise ValidationError(f"Question '{question}' is too short (minimum 5 characters)")
-
-        return model.encode(question, normalize_embeddings=True).tolist()
-
-    except ValidationError:
-        raise
-    except Exception as e:
-        message = f"embed_question: {e}"
-        logger.error(message)
-        raise EmbeddingError(message) from e
-
-
 class RagUseCase:
     def __init__(
             self,
-            session_factory=SessionLocal,
-            llm_model="gpt-3.5-turbo",
-            min_similarity: int = 0.4
+            content_repository: ContentRepositoryInterface,
+            source_repository: SourceRepositoryInterface,
+            embedder: EmbeddingInterface,
+            llm: LLMInterface,
+            llm_model="gpt-3.5-turbo",  # TODO: remove
+            min_similarity: int = 0.4,
     ):
-        self.session_factory = session_factory
+        self.content_repository = content_repository
+        self.source_repository = source_repository
+        self.embedder = embedder
+        self.llm = llm
         self.llm_model = llm_model
         self.min_similarity = min_similarity
 
-        try:
-            api_key = os.getenv("OPENAI_API_KEY")
-            if not api_key:
-                raise ValidationError("OPENAI_API_KEY environment variable not set")
-            self.client = AsyncOpenAI(api_key=api_key)
-        except Exception as e:
-            message = f"Failed to initialize OpenAI client: {e}"
-            logger.error(message)
-            raise ValidationError(message) from e
-
     def search_similar_documents(
             self,
-            session: SessionLocal,
             query_vector: List,
             top_k: int,
-            min_k: int
+            min_k: int,
     ) -> tuple[List[DocumentDto], List[SourceDto]]:
         try:
 
@@ -80,10 +49,9 @@ class RagUseCase:
             if min_k > top_k:
                 raise ValidationError("min_k cannot be greater than top_k")
 
-            content_repository = ContentRepository(session)
-            source_repository = SourceRepository(session)
-
-            documents = content_repository.find_similar_contents(query_vector, top_k, self.min_similarity)
+            documents = self.content_repository.find_similar_contents(
+                query_vector, top_k, self.min_similarity
+            )
 
             if len(documents) < min_k:
                 raise RagError(f'Not enough information to answer: {len(documents)} documents < {min_k}')
@@ -91,7 +59,7 @@ class RagUseCase:
             sources: List[SourceDto] = []
             for document in documents:
                 if document.source_data.id:
-                    source = source_repository.get_source_by_id(document.source_data.id)
+                    source = self.source_repository.get_source_by_id(document.source_data.id)
                     if source:
                         document.source_data = source
                         if source not in sources:
@@ -181,60 +149,28 @@ class RagUseCase:
             logger.error(message)
             raise RagError(message) from e
 
-    @retry(stop=stop_after_attempt(3), reraise=True)
-    async def query_llm_async(self, prompt: str) -> str:
-        # TODO: move to ports/llm_interface.py
-        try:
-
-            if not prompt or not prompt.strip():
-                raise ValidationError("Prompt cannot be empty")
-
-            logger.debug(f"Querying LLM with model: {self.llm_model}")
-
-            response = await self.client.chat.completions.create(
-                model=self.llm_model,
-                messages=[{"role": "user", "content": prompt}]
-            )
-
-            if not response.choices or not response.choices[0].message.content:
-                message = "Empty response from LLM"
-                logger.error(message)
-                raise LLMError(message)
-
-            return response.choices[0].message.content
-
-        except ValidationError:
-            raise
-        except OpenAIError as e:
-            message = f"OpenAI API error: {e}"
-            logger.error(message)
-            raise LLMError(message) from e
-        except RagError as e:
-            message = f"Failed to query LLM: {e}"
-            logger.error(message)
-            raise LLMError(message) from e
-
-    @db_session_manager
-    async def answer_question(self, session: SessionLocal, model: SentenceTransformer, question: str,
-                              top_k: int = 5, min_k: int = 1) -> AnswerDto:
+    async def answer_question(
+            self,
+            question: str,
+            top_k: int = 5,
+            min_k: int = 1,
+    ) -> AnswerDto:
         try:
 
             if not question or not question.strip():
                 raise ValidationError("Question cannot be empty")
-
-            if not model:
-                raise ValidationError("Model cannot be None")
 
             if top_k <= 0 or min_k <= 0:
                 raise ValidationError("top_k and min_k must be positive")
 
             logger.info(f"Processing question: {question[:100]}...")
 
-            query_vector = embed_question(model, question)
-            documents, sources = self.search_similar_documents(session, query_vector=query_vector, top_k=top_k,
-                                                               min_k=min_k)
+            query_vector = self.embedder.embed([question])
+            documents, sources = self.search_similar_documents(
+                query_vector=query_vector, top_k=top_k, min_k=min_k
+            )
             prompt = self.build_prompt(question, docs=documents, language=LanguageEnum.FR)
-            answer = await self.query_llm_async(prompt)
+            answer = await self.llm.generate_response(prompt)
 
             return AnswerDto(answer=answer, sources=sources)
 

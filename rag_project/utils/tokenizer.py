@@ -1,3 +1,5 @@
+# TODO: move to infrastructure layer
+
 import tiktoken
 from functools import lru_cache
 
