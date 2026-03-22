@@ -5,14 +5,13 @@ from fastapi.exceptions import RequestValidationError
 from sentence_transformers import SentenceTransformer
 from contextlib import asynccontextmanager
 
-from rag_project.api.dependencies import get_embedding_model, get_ingestion_service, get_rag_service
-from rag_project.api.exception_handlers import ingestion_exception_handler, database_exception_handler, \
+from rag_project.infrastructure.api.dependencies import get_embedding_model, get_rag_service
+from rag_project.infrastructure.api.exception_handlers import ingestion_exception_handler, database_exception_handler, \
     unexpected_exception_handler, validation_exception_handler
 from rag_project.exceptions import IngestionError, DataBaseError, TimeOutError, RagError, ValidationError, \
     UnexpectedError
 from rag_project.logger import get_logger
-from rag_project.services.ingestion_service import IngestionService
-from rag_project.services.rag_service import RagService
+from rag_project.application.use_cases.RagUseCase import RagUseCase
 
 
 logger = get_logger(__name__)
@@ -41,7 +40,7 @@ app.add_exception_handler(RequestValidationError, validation_exception_handler)
 async def ask_question(
         question: str = Query(...),
         model: SentenceTransformer = Depends(get_embedding_model),
-        service: RagService = Depends(get_rag_service)
+        service: RagUseCase = Depends(get_rag_service)
 ):
     try:
 

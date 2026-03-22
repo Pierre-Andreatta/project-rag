@@ -11,7 +11,7 @@ from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
-from rag_project.db.models.content import Vector
+from rag_project.infrastructure.db.models import Vector
 
 # revision identifiers, used by Alembic.
 revision: str = '79854ef7a2b6'
