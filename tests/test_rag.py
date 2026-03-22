@@ -9,8 +9,8 @@ from rag_project.domain.models.models import DocumentDto, SourceDto, AnswerDto
 from rag_project.exceptions import RagError, ValidationError, DataBaseError
 from rag_project.infrastructure.db.repositories.content_repository import ContentRepository
 from rag_project.infrastructure.db.repositories.source_repository import SourceRepository
-from rag_project.infrastructure.embedding.SentenceTransformerEmbeddingAdapter import SentenceTransformerEmbeddingAdapter
-from rag_project.infrastructure.llm.openAILLMAdapter import OpenAILLMAdapter
+from rag_project.infrastructure.embedding.sentence_transformer_embedding_adapter import SentenceTransformerEmbeddingAdapter
+from rag_project.infrastructure.llm.open_ai_llm_adapter import OpenAILLMAdapter
 from rag_project.logger import get_logger
 from rag_project.domain.prompts.rag_prompts import RagPromptFactory
 from rag_project.application.ports.llm.llm_interface import LLMInterface
