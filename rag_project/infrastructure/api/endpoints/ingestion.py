@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends
 
-from rag_project.application.use_cases.IngestionUseCase import IngestionUseCase
+from rag_project.application.use_cases.ingestion_use_case import IngestionUseCase
 from rag_project.domain.enums import IngestionStatus
 from rag_project.domain.models.models import IngestionRequest, IngestionResponse
 from rag_project.infrastructure.api.dependencies import get_ingestion_use_case

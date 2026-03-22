@@ -3,7 +3,7 @@ from sqlalchemy import cast, literal, func
 from pgvector.sqlalchemy import Vector
 from sqlalchemy.exc import SQLAlchemyError
 
-from rag_project.application.ports.repositories.ContentRepositoryInterface import ContentRepositoryInterface
+from rag_project.application.ports.repositories.content_repository_interface import ContentRepositoryInterface
 from rag_project.infrastructure.db.models.content import ContentORM
 from rag_project.domain.models.models import SourceTypeEnum, DocumentDto
 from rag_project.exceptions import DataBaseError

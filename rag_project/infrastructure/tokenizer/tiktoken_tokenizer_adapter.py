@@ -3,7 +3,7 @@
 import tiktoken
 from functools import lru_cache
 
-from rag_project.application.ports.tokenizer.TokenizerInterface import TokenizerInterface
+from rag_project.application.ports.tokenizer.tokenizer_interface import TokenizerInterface
 from rag_project.logger import get_logger
 
 logger = get_logger(__name__)

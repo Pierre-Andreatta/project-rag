@@ -10,7 +10,7 @@ import time
 from typing import Optional
 from youtube_transcript_api import YouTubeTranscriptApi, TranscriptsDisabled, NoTranscriptFound
 
-from rag_project.application.ports.transcription.transcriptionInterface import TranscriptionInterface
+from rag_project.application.ports.transcription.transcription_interface import TranscriptionInterface
 from rag_project.exceptions import TranscriptionError
 from rag_project.logger import get_logger
 

@@ -1,7 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sentence_transformers import SentenceTransformer
 
-from rag_project.application.use_cases.RagUseCase import RagUseCase
+from rag_project.application.use_cases.rag_use_case import RagUseCase
 from rag_project.exceptions import DataBaseError, RagError, TimeOutError, ValidationError
 from rag_project.infrastructure.api.dependencies import get_rag_use_case
 from rag_project.logger import get_logger

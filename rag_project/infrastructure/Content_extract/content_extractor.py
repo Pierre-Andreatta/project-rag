@@ -1,7 +1,7 @@
 from abc import abstractmethod
 
 from rag_project.application.ports.content_extraction.content_extraction_interface import ContentExtractorInterface, ContentExtractorFactoryInterface
-from rag_project.application.ports.transcription.transcriptionInterface import TranscriptionInterface
+from rag_project.application.ports.transcription.transcription_interface import TranscriptionInterface
 from rag_project.domain.enums import SourceTypeEnum
 from rag_project.exceptions import TranscriptionError, IngestionError, ValidationError, ScraperError
 from rag_project.logger import get_logger

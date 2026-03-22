@@ -2,7 +2,7 @@ from typing import Optional
 from sqlalchemy import select
 from sqlalchemy.exc import SQLAlchemyError
 
-from rag_project.application.ports.repositories.SourceRepositoryInterface import SourceRepositoryInterface
+from rag_project.application.ports.repositories.source_repository_interface import SourceRepositoryInterface
 from rag_project.infrastructure.db.models.source import SourceORM, RejectReasonORM
 from rag_project.domain.models.models import SourceTypeEnum, SourceDto
 from rag_project.exceptions import ValidationError, DataBaseError

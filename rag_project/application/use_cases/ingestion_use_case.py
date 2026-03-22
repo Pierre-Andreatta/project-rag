@@ -1,7 +1,7 @@
 from typing import List
 
 from rag_project.application.ports.embeddings.embedding_interface import EmbeddingInterface
-from rag_project.application.ports.repositories.ContentRepositoryInterface import ContentRepositoryInterface
+from rag_project.application.ports.repositories.content_repository_interface import ContentRepositoryInterface
 from rag_project.application.ports.content_extraction.content_extraction_interface import ContentExtractorFactoryInterface
 
 from rag_project.domain.enums import SourceTypeEnum

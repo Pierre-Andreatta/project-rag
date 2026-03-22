@@ -2,9 +2,9 @@ from typing import List
 
 from rag_project.application.ports.embeddings.embedding_interface import EmbeddingInterface
 from rag_project.application.ports.llm.llm_interface import LLMInterface
-from rag_project.application.ports.repositories.ContentRepositoryInterface import ContentRepositoryInterface
-from rag_project.application.ports.repositories.SourceRepositoryInterface import SourceRepositoryInterface
-from rag_project.application.ports.tokenizer.TokenizerInterface import TokenizerInterface
+from rag_project.application.ports.repositories.content_repository_interface import ContentRepositoryInterface
+from rag_project.application.ports.repositories.source_repository_interface import SourceRepositoryInterface
+from rag_project.application.ports.tokenizer.tokenizer_interface import TokenizerInterface
 from rag_project.domain.enums import LanguageEnum
 from rag_project.domain.models.models import DocumentDto, SourceDto, AnswerDto
 from rag_project.exceptions import RagError, ValidationError, EmbeddingError, DataBaseError, LLMError
