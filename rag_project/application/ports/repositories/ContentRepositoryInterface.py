@@ -5,6 +5,8 @@ from rag_project.domain.enums import SourceTypeEnum
 
 
 class ContentRepositoryInterface(ABC):
+
+    @abstractmethod
     def store_chunks(
             self,
             chunks: List[str],

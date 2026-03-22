@@ -3,7 +3,7 @@ from sentence_transformers import SentenceTransformer
 
 from rag_project.application.use_cases.RagUseCase import RagUseCase
 from rag_project.exceptions import DataBaseError, RagError, TimeOutError, ValidationError
-from rag_project.infrastructure.api.dependencies import get_embedding_model, get_rag_use_case
+from rag_project.infrastructure.api.dependencies import get_rag_use_case
 from rag_project.logger import get_logger
 
 logger = get_logger(__name__)
@@ -14,7 +14,6 @@ router = APIRouter(tags=["rag"])
 @router.post("/ask")
 async def ask_question(
         question: str = Query(...),
-        model: SentenceTransformer = Depends(get_embedding_model),
         service: RagUseCase = Depends(get_rag_use_case),
 ):
     try:
@@ -22,7 +21,6 @@ async def ask_question(
             raise ValidationError("Question cannot be empty")
 
         answer = await service.answer_question(
-            model=model,
             question=question,
         )
         return {"answer": answer.answer, "sources": [

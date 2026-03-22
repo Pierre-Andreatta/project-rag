@@ -4,13 +4,13 @@ from rag_project.application.ports.embeddings.embedding_interface import Embeddi
 from rag_project.application.ports.llm.llm_interface import LLMInterface
 from rag_project.application.ports.repositories.ContentRepositoryInterface import ContentRepositoryInterface
 from rag_project.application.ports.repositories.SourceRepositoryInterface import SourceRepositoryInterface
+from rag_project.application.ports.tokenizer.TokenizerInterface import TokenizerInterface
 from rag_project.domain.enums import LanguageEnum
 from rag_project.domain.models.models import DocumentDto, SourceDto, AnswerDto
 from rag_project.exceptions import RagError, ValidationError, EmbeddingError, DataBaseError, LLMError
 from rag_project.logger import get_logger
 
 from rag_project.domain.prompts.rag_prompts import RagPromptFactory
-from rag_project.utils.tokenizer import count_tokens
 
 logger = get_logger(__name__)
 
@@ -22,14 +22,14 @@ class RagUseCase:
             source_repository: SourceRepositoryInterface,
             embedder: EmbeddingInterface,
             llm: LLMInterface,
-            llm_model="gpt-3.5-turbo",  # TODO: remove
+            tokenizer: TokenizerInterface,
             min_similarity: int = 0.4,
     ):
         self.content_repository = content_repository
         self.source_repository = source_repository
         self.embedder = embedder
         self.llm = llm
-        self.llm_model = llm_model
+        self.tokenizer = tokenizer
         self.min_similarity = min_similarity
 
     def search_similar_documents(
@@ -88,10 +88,10 @@ class RagUseCase:
 
             current_docs = docs.copy()
             context = "\n\n".join([doc.content for doc in current_docs])
-            current_context_token_count = count_tokens(context, model_name=self.llm_model)
+            current_context_token_count = self.tokenizer.count_tokens(context)
 
             while len(current_docs) > 1 and (base_tokens_count + current_context_token_count) > token_limit:
-                last_doc_token_count = count_tokens(current_docs[-1].content, model_name=self.llm_model)
+                last_doc_token_count = self.tokenizer.count_tokens(current_docs[-1].content)
                 current_docs = current_docs[:-1]
                 current_context_token_count = current_context_token_count - last_doc_token_count
 
@@ -134,7 +134,7 @@ class RagUseCase:
 
             prompt_obj = RagPromptFactory.get_prompt(language)
 
-            base_tokens_count = prompt_obj.tokens + count_tokens(question, model_name=self.llm_model)
+            base_tokens_count = prompt_obj.tokens + self.tokenizer.count_tokens(question)
 
             current_docs, context = self.trim_documents_to_fit_token_limit(
                 docs=docs, base_tokens_count=base_tokens_count, token_limit=token_limit

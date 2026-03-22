@@ -18,7 +18,7 @@ from rag_project.logger import get_logger
 logger = get_logger(__name__)
 
 
-class TranscriptionAdapter(TranscriptionInterface):
+class WhisperTranscriptionAdapter(TranscriptionInterface):
     def __init__(self, model_size="base", languages: Optional[list[str]] = None):
         self.languages = languages or ["fr", "en"]
         self.model = whisper.load_model(model_size)

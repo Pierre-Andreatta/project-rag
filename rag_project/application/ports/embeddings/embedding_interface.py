@@ -7,7 +7,7 @@ from rag_project.exceptions import ValidationError, IngestionError
 class EmbeddingInterface(ABC):
 
     @abstractmethod
-    def __init__(self, model):
+    def __init__(self, model: str):
         pass
 
     @abstractmethod

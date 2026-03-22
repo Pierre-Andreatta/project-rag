@@ -14,7 +14,6 @@ from rag_project.infrastructure.llm.openAILLMAdapter import OpenAILLMAdapter
 from rag_project.logger import get_logger
 from rag_project.domain.prompts.rag_prompts import RagPromptFactory
 from rag_project.application.ports.llm.llm_interface import LLMInterface
-from rag_project.utils.tokenizer import count_tokens
 
 logger = get_logger(__name__)
 
