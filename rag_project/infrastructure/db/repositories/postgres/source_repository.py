@@ -13,7 +13,10 @@ from rag_project.logger import get_logger
 logger = get_logger(__name__)
 
 
-class SourceRepository(BaseRepository, SourceRepositoryInterface):
+class PostgresSourceRepository(BaseRepository, SourceRepositoryInterface):
+
+    def __init__(self, session):
+        super().__init__(session)
 
     def create_source(self, source_path: str, source_type: SourceTypeEnum = SourceTypeEnum.DEFAULT) -> SourceDto:
         source_orm = SourceORM(source_path=source_path, source_type=source_type)

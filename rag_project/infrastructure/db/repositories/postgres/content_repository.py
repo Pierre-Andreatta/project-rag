@@ -8,17 +8,17 @@ from rag_project.infrastructure.db.models.content import ContentORM
 from rag_project.domain.models.models import SourceTypeEnum, DocumentDto
 from rag_project.exceptions import DataBaseError
 from rag_project.infrastructure.db.repositories.base_repository import BaseRepository
-from rag_project.infrastructure.db.repositories.source_repository import SourceRepository
+from rag_project.infrastructure.db.repositories.postgres.source_repository import PostgresSourceRepository
 from rag_project.logger import get_logger
 
 logger = get_logger(__name__)
 
 
-class ContentRepository(BaseRepository, ContentRepositoryInterface):
+class PostgresContentRepository(BaseRepository, ContentRepositoryInterface):
 
     def __init__(self, session):
         super().__init__(session)
-        self.source_crud = SourceRepository(session)
+        self.source_crud = PostgresSourceRepository(session)
 
     def store_chunks(
             self,
